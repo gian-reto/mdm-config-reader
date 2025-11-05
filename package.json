@@ -6,7 +6,7 @@
   "types": "index.d.ts",
   "browser": "browser.js",
   "repository": {
-    "url": "git+ssh://git@github.com/napi-rs/package-template-pnpm.git",
+    "url": "git+https://github.com/gian-reto/mdm-config-reader.git",
     "type": "git"
   },
   "license": "MIT",
@@ -46,7 +46,7 @@
     "node": ">= 10"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
+    "registry": "https://npm.pkg.github.com/",
     "access": "public"
   },
   "scripts": {

@@ -11,6 +11,13 @@ crate-type = ["cdylib"]
 napi = "3.0.0"
 napi-derive = "3.0.0"
 
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58.0", features = [
+  "ApplicationModel",
+  "Foundation_Collections",
+  "Storage"
+]}
+
 [build-dependencies]
 napi-build = "2"
 

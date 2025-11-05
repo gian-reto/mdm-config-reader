@@ -1,85 +1,155 @@
-# `@napi-rs/package-template`
+# `@gian-reto/mdm-config-reader`
 
 ![https://github.com/napi-rs/package-template/actions](https://github.com/napi-rs/package-template/workflows/CI/badge.svg)
 
-> Template project for writing node packages with napi-rs.
+> A Node.js library for reading Mobile Device Management (MDM) configuration settings, built with Rust and napi-rs.
 
-# Usage
+## Features
 
-1. Click **Use this template**.
-2. **Clone** your project.
-3. Run `pnpm install` to install dependencies.
-4. Run `npx napi rename -n [name]` command under the project folder to rename your package.
+- 🔐 **Windows MDM Support**: Read configuration settings written by Microsoft Intune
+- 🚀 **Native Performance**: Built with Rust for optimal performance
+- 🌍 **Cross-Platform**: Works on Windows, macOS, and Linux (returns empty object on non-Windows platforms)
+- 📦 **Zero Dependencies**: No additional runtime dependencies required
+- 🔧 **TypeScript Support**: Full TypeScript definitions included
 
-## Install this test package
+## Installation
 
-```
-pnpm add @napi-rs/package-template
+```bash
+npm install @gian-reto/mdm-config-reader
+# or
+pnpm add @gian-reto/mdm-config-reader
+# or
+yarn add @gian-reto/mdm-config-reader
 ```
 
 ## Usage
 
-### Build
+### JavaScript
 
-After `pnpm build` command, you can see `package-template.[darwin|win32|linux].node` file in project root. This is the native addon built from [lib.rs](./src/lib.rs).
+```javascript
+const { getMdmSettings } = require('@gian-reto/mdm-config-reader')
 
-### Test
+const settings = getMdmSettings()
+console.log('MDM Settings:', settings)
+// Example output on Windows with Intune config:
+// { "AppTimeout": "30", "LogLevel": "debug", "EnableFeatureX": "true" }
 
-With [ava](https://github.com/avajs/ava), run `pnpm test` to testing native addon. You can also switch to another testing framework if you want.
+// On macOS/Linux or Windows without MDM config:
+// {}
+```
 
-### CI
+### TypeScript
 
-With GitHub Actions, each commit and pull request will be built and tested automatically in [`node@18`, `node@20`] x [`macOS`, `Linux`, `Windows`] matrix. You will never be afraid of the native addon broken in these platforms.
+```typescript
+import { getMdmSettings } from '@gian-reto/mdm-config-reader'
 
-### Release
+const settings: Record<string, string> = getMdmSettings()
 
-Release native package is very difficult in old days. Native packages may ask developers who use it to install `build toolchain` like `gcc/llvm`, `node-gyp` or something more.
+// All values are strings, regardless of their original type in the MDM store
+const timeout = parseInt(settings['AppTimeout'] || '60')
+const enableFeature = settings['EnableFeatureX'] === 'true'
+```
 
-With `GitHub actions`, we can easily prebuild a `binary` for major platforms. And with `N-API`, we should never be afraid of **ABI Compatible**.
+## API
 
-The other problem is how to deliver prebuild `binary` to users. Downloading it in `postinstall` script is a common way that most packages do it right now. The problem with this solution is it introduced many other packages to download binary that has not been used by `runtime codes`. The other problem is some users may not easily download the binary from `GitHub/CDN` if they are behind a private network (But in most cases, they have a private NPM mirror).
+### `getMdmSettings(): Record<string, string>`
 
-In this package, we choose a better way to solve this problem. We release different `npm packages` for different platforms. And add it to `optionalDependencies` before releasing the `Major` package to npm.
+Reads MDM configuration settings for the current application.
 
-`NPM` will choose which native package should download from `registry` automatically. You can see [npm](./npm) dir for details. And you can also run `pnpm add @napi-rs/package-template` to see how it works.
+**Platform Behavior:**
 
-## Develop requirements
+- **Windows**: Retrieves settings from the `Managed.App.Settings` container written by Microsoft Intune
+- **macOS/Linux**: Returns an empty object `{}`
 
-- Install the latest `Rust`
-- Install `Node.js@16+` which fully supported `Node-API`
-- Run `corepack enable`
+**Returns:**
 
-## Test in local
+- A JavaScript object containing key-value pairs where all values are strings
+- Returns an empty object `{}` if:
+  - No MDM configuration is found
+  - The application is not running in a package context (Windows)
+  - On non-Windows platforms (macOS/Linux)
+  - Any Windows API calls fail
 
-- pnpm
-- pnpm build
-- pnpm test
+**Error Handling:**
 
-And you will see:
+This function never throws errors. It gracefully handles all failure cases by returning an empty object. This makes it safe to call without try-catch blocks.
+
+**Note:** All configuration values are converted to strings, regardless of their original type (int, bool, string) in the MDM store. This provides a consistent interface and allows you to parse/validate values in your application logic.
+
+## Platform Support
+
+This library currently supports:
+
+- ✅ Windows (x64, x86, ARM64) - Full MDM reading support
+- ✅ macOS (x64, ARM64) - Returns empty object (future support planned)
+- ✅ Linux (x64, ARM64, ARM) - Returns empty object (future support planned)
+
+## Development
+
+### Prerequisites
+
+- Rust (latest stable)
+- Node.js 16+
+- pnpm (run `corepack enable`)
+
+On NixOS, you can use the provided Nix flake:
 
 ```bash
-$ ava --verbose
-
-  ✔ sync function from native code
-  ✔ sleep function from native code (201ms)
-  ─
-
-  2 tests passed
-✨  Done in 1.12s.
+nix develop
 ```
 
-## Release package
+### Building
 
-Ensure you have set your **NPM_TOKEN** in the `GitHub` project setting.
+```bash
+# Development build
+pnpm build:debug
 
-In `Settings -> Secrets`, add **NPM_TOKEN** into it.
-
-When you want to release the package:
-
-```
-npm version [<newversion> | major | minor | patch | premajor | preminor | prepatch | prerelease [--preid=<prerelease-id>] | from-git]
-
-git push
+# Production build
+pnpm build
 ```
 
-GitHub actions will do the rest job for you.
+### Testing
+
+```bash
+# Run tests
+pnpm test
+
+# Run simple test
+node simple-test.js
+```
+
+### Project Structure
+
+```
+├── src/
+│   ├── lib.rs       # Main entry point with platform dispatch
+│   └── windows.rs   # Windows-specific implementation
+├── __test__/        # Test files
+├── index.d.ts       # Auto-generated TypeScript definitions
+└── index.js         # Auto-generated JavaScript loader
+```
+
+## How It Works
+
+This library uses [napi-rs](https://napi.rs/) to create a native Node.js addon written in Rust. On Windows, it uses the [windows-rs](https://github.com/microsoft/windows-rs) crate to access the Windows Runtime API and read from the application's `LocalSettings` container, specifically the `Managed.App.Settings` container where Microsoft Intune writes MDM configuration.
+
+The library supports various property types from the MDM store:
+
+- Integers (Int16, Int32, Int64, UInt16, UInt32, UInt64)
+- Booleans
+- Strings
+
+All values are converted to strings for a consistent JavaScript API.
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! This is currently a proof-of-concept with Windows support. Future plans include:
+
+- macOS support (Jamf, other MDM solutions)
+- Linux support (various MDM solutions)
+
+Please open an issue to discuss any changes before submitting a PR.
